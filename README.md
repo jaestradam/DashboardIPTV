@@ -51,3 +51,14 @@ Ejemplo de comando Cron en cPanel / Linux:
 0 * * * * /usr/bin/php /ruta/absoluta/a/tu/carpeta/monitor_iptv.php >/dev/null 2>&1
 ```
 _(Nota: El script está diseñado internamente para ejecutarse en bucle 6 veces durante esa hora para capturar datos cada 10 minutos)._
+
+## ⚠️ Advertencia de Seguridad Importante
+
+NUNCA subas este código a un repositorio público con tus credenciales reales de IPTV ni tu URL.
+Asegúrate de dejar las variables vacías o con datos ficticios antes de hacer un commit. Si crees que has expuesto tus credenciales en algún momento, solicita a tu proveedor un cambio de contraseña inmediatamente.
+
+## 📄 Licencia
+
+Este proyecto se distribuye bajo la licencia MIT. Eres libre de usarlo, modificarlo y distribuirlo, tanto para uso personal como comercial. Consulta el archivo LICENSE para más detalles.
+
+Desarrollado con ❤️ para la comunidad.
