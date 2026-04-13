@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📺</text></svg>">
+    <title>Dashboard IPTV Protegido</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #1c1e21; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        
+        /* Contenedores */
+        .box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); margin-bottom: 20px; width: 100%; box-sizing: border-box; }
+        
+        /* Login */
+        #login-form { max-width: 400px; text-align: center; margin-top: 50px; }
+        input[type="password"], input[type="date"] { width: 90%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; }
+        
+        /* Layout del Dashboard (Flexbox) */
+        #dashboard { 
+            display: none; 
+            width: 100%;
+            max-width: 1200px;
+            flex-direction: row; 
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        /* Columna Lateral (Filtros) */
+        .sidebar { width: 280px; flex-shrink: 0; position: sticky; top: 20px; }
+        .sidebar h3 { margin-top: 0; font-size: 18px; color: #444; }
+
+        /* Contenido Principal (Gráfica) */
+        .main-content { flex-grow: 1; }
+
+        /* Botones */
+        button { background: #3498db; color: white; border: none; padding: 12px; cursor: pointer; border-radius: 6px; width: 100%; font-weight: bold; transition: background 0.3s; }
+        button:hover { background: #2980b9; }
+        .btn-reset { background-color: #e74c3c; margin-top: 20px; font-size: 13px; }
+        .btn-reset:hover { background-color: #c0392b; }
+
+        /* Errores */
+        #caja-errores { display: none; background-color: #fff5f5; border-left: 4px solid #e74c3c; padding: 15px; margin-top: 20px; border-radius: 6px; }
+        #listaErrores { color: #c0392b; list-style: none; padding: 0; font-size: 13px; max-height: 200px; overflow-y: auto; }
+        #listaErrores li { padding: 8px 0; border-bottom: 1px solid #fed7d7; }
+
+        /* Estilos Métricas */
+        .metric-item { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; color: #444; }
+        .metric-val { font-weight: bold; color: #2c3e50; }
+
+        /* Adaptabilidad móvil */
+        @media (max-width: 850px) {
+            #dashboard { flex-direction: column; }
+            .sidebar { width: 100%; position: static; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="login-form" class="box">
+        <h2 style="color: #3498db;">🔐 Acceso Privado</h2>
+        <input type="password" id="passInput" placeholder="Contraseña">
+        <button onclick="intentarLogin()">Entrar al Panel</button>
+        <p id="errorLog" style="color:red; display:none; font-size: 14px;">Contraseña incorrecta</p>
+    </div>
+
+    <div id="dashboard">
+        
+        <aside class="sidebar box">
+            <h3>🔍 Filtros</h3>
+            <label style="font-size: 14px; color: #666;">Seleccionar fecha:</label>
+            <input type="date" id="fechaSelector" onchange="filtrarPorFecha()">
+
+            <button onclick="verTodoHistorial()" style="background: #27ae60; margin-top: 10px; font-size: 14px;">
+                👁️ Ver Todo el Historial
+            </button>
+            
+            <div style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 15px;">
+                <p style="font-size: 14px; color: #666; font-weight: bold; margin-bottom: 10px;">📊 Revisión del día:</p>
+                <div class="metric-item">
+                    <span>Media sesiones:</span>
+                    <span class="metric-val" id="metric-media">0</span>
+                </div>
+                <div class="metric-item">
+                    <span>Hora pico media:</span>
+                    <span class="metric-val" id="metric-pico">--:--</span>
+                </div>
+                <div class="metric-item">
+                    <span>Tiempo al límite:</span>
+                    <span class="metric-val" id="metric-limite">0 min</span>
+                </div>
+                <div class="metric-item" style="color: #e74c3c;">
+                    <span>Tiempo caído:</span>
+                    <span class="metric-val" id="metric-caido" style="color: #e74c3c;">0 min</span>
+                </div>
+
+                <div class="metric-item">
+                    <span>Uptime (Fiabilidad):</span>
+                    <span class="metric-val" id="metric-uptime" style="color: #27ae60;">100%</span>
+                </div>
+                <div class="metric-item">
+                    <span>Rentabilidad (Ocupación):</span>
+                    <span class="metric-val" id="metric-rentabilidad">0%</span>
+                </div>
+            </div>
+
+            <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 10px;">
+                <p style="font-size: 12px; color: #999;">Mantenimiento:</p>
+                <button class="btn-reset" onclick="resetearDatos()">
+                    ⚠️ Archivar y Reiniciar Historial
+                </button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="box">
+                <h2 style="margin-top: 0; font-size: 22px; color: #2c3e50;">📺 Uso de Conexiones IPTV</h2>
+                <canvas id="graficaIPTV"></canvas>
+            </div>
+
+            <div id="caja-errores" class="box">
+                <h3 style="margin-top: 0; color: #e74c3c; font-size: 16px;">⚠️ Registro de Incidencias del día</h3>
+                <ul id="listaErrores"></ul>
+            </div>
+        </main>
+
+    </div>
+
+    <script>
+        async function intentarLogin() {
+            const pass = document.getElementById('passInput').value;
+            const formData = new FormData();
+            formData.append('password', pass);
+
+            const res = await fetch('api.php', { method: 'POST', body: formData });
+            
+            if (res.ok) {
+                document.getElementById('login-form').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'flex';
+                cargarGrafica();
+            } else {
+                document.getElementById('errorLog').style.display = 'block';
+            }
+        }
+
+        async function resetearDatos() {
+            if (confirm("¿Estás seguro de que quieres archivar todo el historial? El gráfico se quedará a cero hasta la próxima entrada de datos.")) {
+                const formData = new FormData();
+                formData.append('action', 'reset'); 
+
+                try {
+                    const res = await fetch('api.php', { method: 'POST', body: formData });
+                    if (res.ok) {
+                        alert("Historial archivado correctamente.");
+                        location.reload(); 
+                    } else {
+                        alert("Hubo un problema al archivar el historial.");
+                    }
+                } catch (error) {
+                    console.error("Error:", error);
+                }
+            }
+        }
+
+        window.onload = async () => {
+            const check = await fetch('api.php');
+            if (check.ok) {
+                document.getElementById('login-form').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'flex'; 
+                cargarGrafica();
+            }
+        }
+        
+        let datosCompletos = []; 
+        let miGrafica = null;    
+
+        async function cargarGrafica() {
+            const respuesta = await fetch('api.php');
+            if (!respuesta.ok) return; 
+            
+            datosCompletos = await respuesta.json();
+            
+            const hoy = new Date().toISOString().split('T')[0];
+            document.getElementById('fechaSelector').value = hoy;
+            
+            filtrarPorFecha(); 
+        }
+
+        // --- NUEVO: Función auxiliar para formatear los minutos a formato "Xh Ym" ---
+        function formatearTiempo(minutosTotales) {
+            if (minutosTotales === 0) return "0 min";
+            const horas = Math.floor(minutosTotales / 60);
+            const minutos = minutosTotales % 60;
+            if (horas > 0) {
+                return `${horas}h ${minutos}m`;
+            }
+            return `${minutos} min`;
+        }
+
+        // --- NUEVO: Función para ver todo sin filtros ---
+        function verTodoHistorial() {
+            document.getElementById('fechaSelector').value = ""; // Limpiamos el calendario
+            renderizarDashboard(datosCompletos, true); // True indica que es "Vista Global"
+        }
+
+        // --- NUEVO: Función para calcular y pintar las métricas ---
+        function actualizarMetricas(datos) {
+            if (datos.length === 0) {
+                document.getElementById('metric-media').innerText = "0";
+                document.getElementById('metric-limite').innerText = "0 min";
+                document.getElementById('metric-caido').innerText = "0 min";
+                return;
+            }
+
+            // 1. Media de sesiones (Suma de todas las activas / Número de registros)
+            const sumaActivas = datos.reduce((acc, curr) => acc + curr.activas, 0);
+            const media = (sumaActivas / datos.length).toFixed(1); // Redondeado a 1 decimal
+
+            // 2. Tiempo al máximo (Contamos los registros donde activas >= maximas, y multiplicamos por 10 min)
+            const registrosLimite = datos.filter(d => d.activas > 0 && d.activas >= d.maximas).length;
+            const minLimite = registrosLimite * 10;
+
+            // 3. Tiempo Caído (Errores. Multiplicado por 10 min)
+            const registrosCaido = datos.filter(d => d.estado !== 'Active' && d.estado !== 'Unknown').length;
+            const minCaido = registrosCaido * 10;
+
+            // --- NUEVOS CÁLCULOS ---
+
+            // 1. Uptime %
+            const porcentajeUptime = ((datos.length - registrosCaido) / datos.length) * 100;
+            document.getElementById('metric-uptime').innerText = porcentajeUptime.toFixed(2) + "%";
+            // Cambiamos el color: Verde si es >98%, Naranja si es >90%, Rojo si es peor
+            document.getElementById('metric-uptime').style.color = porcentajeUptime > 98 ? '#27ae60' : (porcentajeUptime > 90 ? '#f39c12' : '#e74c3c');
+
+            // 2. Rentabilidad / Ocupación %
+            // Primero buscamos cuál es el máximo de conexiones permitidas (cogemos la primera que encontremos que sea > 0, o asumimos 1 para evitar errores)
+            const limiteContratado = datos.find(d => d.maximas > 0)?.maximas || 1; 
+            const capacidadTotalDelDia = datos.length * limiteContratado;
+            const porcentajeOcupacion = (sumaActivas / capacidadTotalDelDia) * 100;
+
+            // Cálculo de Hora Pico Promedio
+            // Agrupamos por hora (HH:00) y sumamos conexiones
+            const horasMap = {};
+            datos.forEach(d => {
+                const hora = d.fecha.split(' ')[1].split(':')[0] + ":00";
+                if (!horasMap[hora]) horasMap[hora] = { suma: 0, cuenta: 0 };
+                horasMap[hora].suma += d.activas;
+                horasMap[hora].cuenta++;
+            });
+
+            let maxMedia = -1;
+            let horaPico = "--:--";
+            for (const h in horasMap) {
+                const prom = horasMap[h].suma / horasMap[h].cuenta;
+                if (prom > maxMedia) {
+                    maxMedia = prom;
+                    horaPico = h;
+                }
+            }
+
+            // Actualizamos el HTML
+            document.getElementById('metric-media').innerText = media;
+            document.getElementById('metric-limite').innerText = formatearTiempo(minLimite);
+            document.getElementById('metric-caido').innerText = formatearTiempo(minCaido);
+            document.getElementById('metric-rentabilidad').innerText = porcentajeOcupacion.toFixed(1) + "%";
+            document.getElementById('metric-pico').innerText = horaPico;
+        }
+
+        // --- MODIFICADO: Centralizamos el renderizado ---
+        function filtrarPorFecha() {
+            const fecha = document.getElementById('fechaSelector').value;
+            const filtrados = datosCompletos.filter(item => item.fecha.startsWith(fecha));
+            renderizarDashboard(filtrados, false);
+        }
+
+        function renderizarDashboard(datosFiltrados, esGlobal) {
+            const ctx = document.getElementById('graficaIPTV').getContext('2d');
+
+            if (miGrafica) {
+                miGrafica.destroy();
+            }
+
+            // Llamamos a nuestra nueva función para que recalcule los datos cada vez que cambias de día
+            actualizarMetricas(datosFiltrados);
+
+            if (datosFiltrados.length === 0) {
+                return;
+            }
+
+            const errores = datosFiltrados.filter(d => d.estado !== 'Active' && d.estado !== 'Unknown');
+            if (errores.length > 0) {
+                document.getElementById('caja-errores').style.display = 'block';
+                const lista = document.getElementById('listaErrores');
+                lista.innerHTML = ''; 
+                errores.reverse().forEach(e => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<strong>${e.fecha.split(' ')[1]}:</strong> ${e.estado}`;
+                    lista.appendChild(li);
+                });
+            } else {
+                document.getElementById('caja-errores').style.display = 'none';
+            }
+
+            miGrafica = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: datosFiltrados.map(i => esGlobal ? i.fecha.substring(5, 16) : i.fecha.split(' ')[1]),
+                    datasets: [{
+                        label: 'Conexiones Activas',
+                        data: datosFiltrados.map(i => i.activas),
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: datosFiltrados.map(i => (i.estado !== 'Active' && i.estado !== 'Unknown') ? 'red' : '#3498db')
+                    },
+                    {
+                        label: 'Conexiones Máximas',
+                        data: datosFiltrados.map(i => i.maximas),
+                        borderColor: '#f5f52d',
+                        backgroundColor: 'rgba(245, 245, 45, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    const indice = context.dataIndex;
+                                    const estado_actual = datosFiltrados[indice].estado;
+                                    
+                                    if (estado_actual !== 'Active') {
+                                        return 'Estado: ' + estado_actual + ' ⚠️';
+                                    }
+                                    return 'Estado: ' + estado_actual;
+                                }
+                            }
+                        }
+                    }
+                },
+                // --- AQUÍ ESTÁ EL PLUGIN PARA EL FONDO ROJO ---
+                plugins: [{
+                    id: 'errorHighlight',
+                    beforeDraw: (chart) => {
+                        const {ctx, chartArea: {top, bottom, left, right}, scales: {x, y}} = chart;
+                        
+                        ctx.save();
+                        datosFiltrados.forEach((d, index) => {
+                            // Si el estado no es "Active" ni "Unknown", es un error
+                            if (d.estado !== 'Active' && d.estado !== 'Unknown') {
+                                const xPos = x.getPixelForValue(index);
+                                
+                                // Calculamos el ancho de la franja (distancia entre puntos)
+                                const totalPuntos = datosFiltrados.length;
+                                const anchoGrafica = right - left;
+                                const anchoBloque = totalPuntos > 1 ? anchoGrafica / (totalPuntos - 1) : anchoGrafica;
+                                
+                                // Dibujamos el rectángulo de fondo
+                                ctx.fillStyle = 'rgba(231, 76, 60, 0.15)'; // Rojo muy suave (alpha 0.15)
+                                // Centramos el bloque sobre el punto
+                                ctx.fillRect(xPos - (anchoBloque / 2), top, anchoBloque, bottom - top);
+                            }
+                        });
+                        ctx.restore();
+                    }
+                }]
+            });
+        };
+    </script>
+</body>
+</html>
