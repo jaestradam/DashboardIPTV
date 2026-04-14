@@ -3,7 +3,8 @@
 Un panel de monitorización ligero, seguro y visual para conexiones IPTV (basadas en la API de Xtream Codes). Desarrollado en PHP y JavaScript (Chart.js), este proyecto permite registrar, archivar y analizar el uso de tus conexiones a lo largo del tiempo sin necesidad de bases de datos pesadas.
 
 ![Captura del login con contraseña](screenshot01.png)
-![Captura del login con contraseña bullet points](screenshotpass01.png) ![Captura del login con contraseña sin bullet points](screenshotpass02.png)
+![Captura del login con contraseña bullet points](screenshotpass01.png)
+![Captura del login con contraseña sin bullet points](screenshotpass02.png)
 ![Captura del panel](screenshot02.png)
 
 ## ✨ Características Principales
