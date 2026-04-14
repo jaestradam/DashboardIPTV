@@ -13,7 +13,15 @@
         
         /* Login */
         #login-form { max-width: 400px; text-align: center; margin-top: 50px; }
-        input[type="password"], input[type="date"] { width: 90%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; }
+        /* Actualiza esta línea en tu <style> */
+        input[type="text"], input[type="password"], input[type="date"] { 
+            width: 90%; 
+            padding: 12px; 
+            margin: 10px 0; 
+            border: 1px solid #ddd; 
+            border-radius: 6px; 
+            font-size: 16px; 
+        }
         
         /* Layout del Dashboard (Flexbox) */
         #dashboard { 
@@ -35,7 +43,7 @@
         /* Botones */
         button { background: #3498db; color: white; border: none; padding: 12px; cursor: pointer; border-radius: 6px; width: 100%; font-weight: bold; transition: background 0.3s; }
         button:hover { background: #2980b9; }
-        .btn-reset { background-color: #e74c3c; margin-top: 20px; font-size: 13px; }
+        .btn-reset { background-color: #e74c3c; margin-top: 10px; font-size: 13px; }
         .btn-reset:hover { background-color: #c0392b; }
 
         /* Errores */
@@ -58,7 +66,15 @@
 
     <div id="login-form" class="box">
         <h2 style="color: #3498db;">🔐 Acceso Privado</h2>
-        <input type="password" id="passInput" placeholder="Contraseña">
+        
+        <div style="position: relative; width: 90%; margin: 10px auto;">
+            <input type="password" id="passInput" placeholder="Contraseña" onkeydown="if(event.key === 'Enter') intentarLogin()" style="width: 100%; margin: 0; padding-right: 40px; box-sizing: border-box;">
+            
+            <span id="togglePassword" onclick="togglePassVisibility()" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 18px; user-select: none;" title="Mostrar/Ocultar contraseña">
+                👁️
+            </span>
+        </div>
+
         <button onclick="intentarLogin()">Entrar al Panel</button>
         <p id="errorLog" style="color:red; display:none; font-size: 14px;">Contraseña incorrecta</p>
     </div>
@@ -67,7 +83,7 @@
         
         <aside class="sidebar box">
             <h3>🔍 Filtros</h3>
-            <label style="font-size: 14px; color: #666;">Seleccionar fecha:</label>
+            <label style="font-size: 14px; color: #666; font-weight: bold; margin-bottom: 10px;">📅 Seleccionar fecha:</label>
             <input type="date" id="fechaSelector" onchange="filtrarPorFecha()">
 
             <button onclick="verTodoHistorial()" style="background: #27ae60; margin-top: 10px; font-size: 14px;">
@@ -92,7 +108,6 @@
                     <span>Tiempo caído:</span>
                     <span class="metric-val" id="metric-caido" style="color: #e74c3c;">0 min</span>
                 </div>
-
                 <div class="metric-item">
                     <span>Uptime (Fiabilidad):</span>
                     <span class="metric-val" id="metric-uptime" style="color: #27ae60;">100%</span>
@@ -101,10 +116,14 @@
                     <span>Rentabilidad (Ocupación):</span>
                     <span class="metric-val" id="metric-rentabilidad">0%</span>
                 </div>
+                <div class="metric-item" id="row-timespan" style="display: none;">
+                    <span>Rango temporal:</span>
+                    <span class="metric-val" id="metric-timespan">--</span>
+                </div>
             </div>
 
             <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 10px;">
-                <p style="font-size: 12px; color: #999;">Mantenimiento:</p>
+                <p style="font-size: 14px; color: #666; font-weight: bold; margin-bottom: 10px;">🛠️ Mantenimiento:</p>
                 <button class="btn-reset" onclick="resetearDatos()">
                     ⚠️ Archivar y Reiniciar Historial
                 </button>
@@ -203,7 +222,7 @@
         }
 
         // --- NUEVO: Función para calcular y pintar las métricas ---
-        function actualizarMetricas(datos) {
+        function actualizarMetricas(datos, esGlobal) {
             if (datos.length === 0) {
                 document.getElementById('metric-media').innerText = "0";
                 document.getElementById('metric-limite').innerText = "0 min";
@@ -257,6 +276,32 @@
                 }
             }
 
+            const rowTimespan = document.getElementById('row-timespan');
+    
+            if (datos.length === 0) {
+                // ... (tus limpiezas de campos actuales) ...
+                rowTimespan.style.display = 'none';
+                return;
+            }
+
+            // --- LÓGICA DEL TIMESPAN ---
+            if (esGlobal && datos.length > 1) {
+                rowTimespan.style.display = 'flex';
+                
+                // Convertimos fechas de "YYYY-MM-DD HH:mm:ss" a objetos Date
+                // Usamos .replace(/-/g, "/") para máxima compatibilidad con todos los navegadores
+                const inicio = new Date(datos[0].fecha.replace(/-/g, "/"));
+                const fin = new Date(datos[datos.length - 1].fecha.replace(/-/g, "/"));
+                const diffMs = fin - inicio;
+
+                const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                const horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                
+                document.getElementById('metric-timespan').innerText = `${dias}d ${horas}h`;
+            } else {
+                rowTimespan.style.display = 'none';
+            }
+
             // Actualizamos el HTML
             document.getElementById('metric-media').innerText = media;
             document.getElementById('metric-limite').innerText = formatearTiempo(minLimite);
@@ -280,7 +325,7 @@
             }
 
             // Llamamos a nuestra nueva función para que recalcule los datos cada vez que cambias de día
-            actualizarMetricas(datosFiltrados);
+            actualizarMetricas(datosFiltrados, esGlobal);
 
             if (datosFiltrados.length === 0) {
                 return;
@@ -310,7 +355,8 @@
                         borderColor: '#3498db',
                         backgroundColor: 'rgba(52, 152, 219, 0.1)',
                         fill: true,
-                        tension: 0.3,
+                        tension: 0,
+                        pointRadius: datosFiltrados.map(i => (i.estado !== 'Active' && i.estado !== 'Unknown') ? 6 : 0),
                         pointBackgroundColor: datosFiltrados.map(i => (i.estado !== 'Active' && i.estado !== 'Unknown') ? 'red' : '#3498db')
                     },
                     {
@@ -319,7 +365,8 @@
                         borderColor: '#f5f52d',
                         backgroundColor: 'rgba(245, 245, 45, 0.1)',
                         fill: true,
-                        tension: 0.3
+                        tension: 0,
+                        pointRadius: 0
                     }]
                 },
                 options: {
@@ -371,6 +418,20 @@
                 }]
             });
         };
+
+        // --- NUEVO: Mostrar/Ocultar contraseña ---
+        function togglePassVisibility() {
+            const input = document.getElementById('passInput');
+            const icon = document.getElementById('togglePassword');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.innerText = '🙈'; // Cambiamos el icono para indicar que se puede ocultar
+            } else {
+                input.type = 'password';
+                icon.innerText = '👁️'; // Volvemos al ojito normal
+            }
+        }
     </script>
 </body>
 </html>
