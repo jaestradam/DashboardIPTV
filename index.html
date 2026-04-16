@@ -124,6 +124,9 @@
 
             <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 10px;">
                 <p style="font-size: 14px; color: #666; font-weight: bold; margin-bottom: 10px;">🛠️ Mantenimiento:</p>
+                <span class="metric-item">
+                    💾 Tamaño de base de datos: <span id="csv-size">-- KB</span>
+                </span>
                 <button class="btn-reset" onclick="resetearDatos()">
                     ⚠️ Archivar y Reiniciar Historial
                 </button>
@@ -196,6 +199,14 @@
             const respuesta = await fetch('api.php');
             if (!respuesta.ok) return; 
             
+            // --- NUEVO: Leer el tamaño de la cabecera HTTP ---
+            const bytes = respuesta.headers.get('X-CSV-Size');
+            if (bytes !== null) {
+                const kb = (bytes / 1024).toFixed(2); // Convertimos Bytes a Kilobytes con 2 decimales
+                document.getElementById('csv-size').innerText = kb + ' KB';
+            }
+            // ------------------------------------------------
+
             datosCompletos = await respuesta.json();
             
             const hoy = new Date().toISOString().split('T')[0];

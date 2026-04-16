@@ -65,5 +65,12 @@ if (file_exists($archivo_csv) && ($gestor = fopen($archivo_csv, "r")) !== FALSE)
     fclose($gestor);
 }
 
+// --- NUEVO: Enviamos el tamaño del archivo en una cabecera oculta ---
+if (file_exists($archivo_csv)) {
+    header('X-CSV-Size: ' . filesize($archivo_csv));
+} else {
+    header('X-CSV-Size: 0');
+}
+
 // Imprimimos el JSON final
 echo json_encode($datos);
